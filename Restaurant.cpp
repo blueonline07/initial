@@ -303,6 +303,7 @@ class imp_res : public Restaurant
 				}
 				else{
 					p = p->next;
+					i--;
 				}
 			}
 			for(int i=0; i < num  && qSize; i++){	
@@ -840,8 +841,7 @@ class imp_res : public Restaurant
 		}
 		void LIGHT(int num)
 		{
-			static int query = 1;
-			cout<<query++<<" --------------------"<<endl;
+			// cout<<query++<<" --------------------"<<endl;
 			if(num > 0){
 				customer *p = cur;
 				// cout<<curSize<<endl;
