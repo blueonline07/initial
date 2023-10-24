@@ -2,6 +2,7 @@
 
 class imp_res : public Restaurant
 {
+	bool dontAdd;
 	customer *cur;
 	customer *qHead, *qCur;
 	customer *first, *last;
@@ -12,36 +13,54 @@ class imp_res : public Restaurant
 			cur=qHead = qCur = first = last =  nullptr;
 			queueOrder = nullptr;
 			curSize = qSize =  0;
+			dontAdd = false;
 		}
-		void swapNode(customer* a, customer* b){
-			customer* aPrev = a->prev;
-			customer* aNext = a->next;
-			customer* bPrev = b->prev;
-			customer* bNext = b->next;
-			if(aNext == b || bNext == a){
-				if(aNext == b){
-					aPrev->next = b;
-					b->prev = aPrev;
-					b->next = a;
-					a->prev = b;
-					a->next = bNext;
-					bNext->prev = a;
-				}
-				else if( bNext == a){
-					bPrev->next = a;
-					a->prev = bPrev;
-					a->next = b;
-					b->prev = a;
-					b->next = aNext;
-					aNext->prev = b;
+		void deleteInOrder(customer* p ){
+			customer* tmp = p;
+			if(p == first){
+				first = first->next;
+				if(first)
+					first->prev = nullptr;
+				else{
+					last = 0;
 				}
 			}
-			else if( aPrev == nullptr || bNext == nullptr){
-				
+			else if( p== last){
+				last = last->prev;
+				if(last) last->next = nullptr;
+				else first = 0;
 			}
 			else{
-
+				customer*	pPrev = p->prev;
+				customer*	pNext = p->next;
+				pPrev->next = pNext;
+				pNext->prev = pPrev;
 			}
+			delete tmp; 
+		}
+		void deleteNodeInQueue(customer* p){
+			customer* tmp = p;
+			if(p == qHead){
+				qHead = qHead->next;
+				if(qHead)
+					qHead->prev = nullptr;
+				else{
+					qCur = 0;
+				}
+			}
+			else if( p== qCur){
+				qCur = qCur->prev;
+				if(qCur) qCur->next = nullptr;
+				else qHead = 0;
+			}
+			else{
+				customer*	pPrev = p->prev;
+				customer*	pNext = p->next;
+				pPrev->next = pNext;
+				pNext->prev = pPrev;
+			}
+			delete tmp;
+			qSize --;
 		}
 		customer* cloneQueue(customer* head){
 			int i = 1;
@@ -104,25 +123,13 @@ class imp_res : public Restaurant
 			if(!energy){
 				return;
 			}
-			if(cur){
-				customer *p = cur;
-				for(int i =0; i<curSize; i++){
-					if(name == p->name){
-						return;
-					}
-					p = p->next;
+			if(first && !dontAdd){
+				customer* t = first;
+				while(t){
+					if(t->name == name) return;
+					t = t->next;
 				}
 			}
-			
-			if(qHead){
-				customer *p = qHead;
-				for(int i=0; i<qSize; i++){
-					if(name == p->name)
-						return;
-					p = p->next;
-				}
-			}
-			
 			if(curSize >= MAXSIZE){
 				if(qSize < MAXSIZE){
 					if(!qSize){
@@ -132,6 +139,14 @@ class imp_res : public Restaurant
 						qCur->next = new customer(name,energy,qCur,nullptr);
 						qCur = qCur->next;
 					}
+					if(!dontAdd){
+						if(!first) first = last = new customer(name,energy,nullptr,nullptr);
+						else {
+							last->next = new customer(name, energy, last, nullptr);
+							last = last->next;
+						}
+					}
+					
 					qSize++;
 				}
 				else return;
@@ -140,7 +155,6 @@ class imp_res : public Restaurant
 				if(curSize < MAXSIZE/2){
 					if(!cur){
 						cur = new customer (name, energy, nullptr, nullptr);
-						first = last = new customer(name, energy,nullptr,nullptr);
 					}
 					else{
 						if(energy >= cur->energy){
@@ -177,8 +191,6 @@ class imp_res : public Restaurant
 								///make cirly ll
 							}
 						}
-						last->next = new customer(name,energy,last,nullptr);
-						last = last->next;
 					}
 					curSize++;
 				}
@@ -198,7 +210,7 @@ class imp_res : public Restaurant
 					cur = pos;
 					if(!cur){
 						cur = new customer (name, energy, nullptr, nullptr);
-						first = last = new customer(name, energy,nullptr,nullptr);
+						
 					}
 					else{
 						if(!isNegative){ //them ben phai
@@ -232,12 +244,18 @@ class imp_res : public Restaurant
 								cur = cur->prev;
 							}
 						}
-						last->next = new customer(name,energy,last,nullptr);
-						last = last->next;
+						
 					}
 					curSize++;
 				}
-
+				if(!dontAdd){
+					if(!first) first = last = new customer(name,energy,nullptr,nullptr);
+					else {
+						last->next = new customer(name, energy, last, nullptr);
+						last = last->next;
+					}
+				}
+				
 			}
 			
 		}
@@ -247,36 +265,53 @@ class imp_res : public Restaurant
 			if(num >= curSize){
 				num = curSize;
 			}
-			
-			for(int i=0; i< num; i++){
+			customer* p = first;
+			for(int i=0; i< num && p; i++){
 				customer* cus = cur;
-				for(int j=0; j<curSize; j++){
-					if(cus->name == first->name){
+				
+				bool foundInTable = false;
+
+				for(int j=0; j<curSize && !foundInTable ; j++){
+					if(cus->name == p->name){
 						deleteNode(cus);
-						break;
+						foundInTable = true;
+					}
+					cus = cus->next;
+				}
+				if(foundInTable){
+					if(p == first){
+						customer *del = first;
+						first = first->next;
+						p = p->next;
+						if(first){
+							first->prev = nullptr;
+						}
+						else{
+							last = nullptr; // = first
+						}
+						delete del;
 					}
 					else{
-						cus = cus->next;
+					   	customer* pPrev = p->prev;
+						customer* pNext = p->next;
+						customer* temp = p;
+						p = p->next;
+						pPrev->next = pNext;
+						pNext->prev = pPrev;
+						delete temp;
 					}
 				}
-				customer *del = first;
-				first = first->next;
-				if(first){
-					first->prev = nullptr;
-				}
 				else{
-					last = nullptr; // = first
+					p = p->next;
 				}
-				delete del;
 			}
-			for(int i=0; i < num; i++){	
-				if(qSize){
-					string name = qHead->name;
-					int energy = qHead->energy;
-					popQueue();
-					RED(name,energy);
-				}
-				else break;
+			for(int i=0; i < num  && qSize; i++){	
+				dontAdd = true;
+				string name = qHead->name;
+				int energy = qHead->energy;
+				popQueue();
+				RED(name,energy);
+				dontAdd = false;
 			}
 		}
 		int inssort(customer*p, int n , int incr){
@@ -456,16 +491,7 @@ class imp_res : public Restaurant
 		}
 		void PURPLE() 
 		{
-			queueOrder = cloneQueue(qHead);
-			
-			// cout<<"---------"<<endl;
-			// customer* t = first;
-			// while(t){
-			// 	t->print();
-			// 	t = t->next;
-			// }
-			// cout<<endl<<"---------"<<endl;
-
+			queueOrder = cloneQueue(first);
 			int MAX_ENERGY = 0;
 			customer* p = qCur;
 			int pos = 0;
@@ -480,7 +506,6 @@ class imp_res : public Restaurant
 			}
 			int q = shellSort(pos) % MAXSIZE;
 			BLUE(q);
-			// cout<<q<<endl;
 			// xoa queueoreder
 			while(queueOrder){
 				customer* temp = queueOrder;
@@ -706,150 +731,117 @@ class imp_res : public Restaurant
 		}
 		void DOMAIN_EXPANSION()
 		{
+			customer* temp = nullptr;
 			int pos = 0;
-			int neg = 0;
-			customer *p = cur;
-			for(int i =0; i<curSize; i++){
-				if(p->energy < 0){
-					neg +=p->energy;
+			int all = 0;
+			customer *p = first;
+			while(p){
+				if(p->energy > 0){
+					pos += p->energy;
 				}
-				else 
-					pos+= p->energy;
-				p = p->next;
-
-			}
-			p = qHead;
-			for(int i =0; i< qSize; i++){
-				if(p->energy < 0){
-					neg +=p->energy;
-				}
-				else 
-					pos+= p->energy;
+				all += p->energy;
 				p = p->next;
 			}
 			
-			if((-neg) > pos){
-				customer* p = qCur;
+			if( abs(all) > pos){
+				customer* p = first;
 				while(p){
 					if(p->energy > 0){
-						p->print();
-						qSize--;
-						customer * temp = p;
-						customer* nextPos = p->next;
-						customer* prevPos = p->prev;
-						if(prevPos) prevPos->next = nextPos;
-						else {
-							qHead = p->next;
-						}
-						if(nextPos) nextPos->prev = prevPos;
+						customer* del = p;
+						if(!temp) temp = new customer(p->name, p->energy,nullptr, nullptr);
 						else{
-							qCur = p->prev;
+							temp->next = new customer(p->name, p->energy, temp, nullptr);
+							temp = temp->next;
 						}
-						p = p->prev;
-						delete temp;
-					}
-					else p = p->prev;
-				}
-				p = last;
-				while (p)
-				{
-					if(p->energy > 0){
-						customer * temp = p;
-						
-						customer* nextPos = p->next;
-						customer* prevPos = p->prev;
-						if(prevPos) prevPos->next = nextPos;
-						else {
-							first = p->next;
-						}
-						if(nextPos) nextPos->prev = prevPos;
-						else{
-							last = p->prev;
+						bool inTable = false;
+						customer* cusInTable = cur;
+						for(int i=0; i< curSize && !inTable && cusInTable; i++){
+							if(cusInTable->name == p->name){
+								deleteNode(cusInTable);
+								inTable = true;
+							}
+							cusInTable = cusInTable->next;
 						}
 
-						customer* cus= cur;
-						for(int i=0; i< curSize; i++){
-							if(cus->name == temp->name){
-								cus->print();
-								deleteNode(cus);
-								break;
+						if(!inTable){
+							customer* cusInQueue = qHead;
+							while (cusInQueue)
+							{
+								if(cusInQueue->name == p->name){
+									deleteNodeInQueue(cusInQueue);
+									break;
+								}
+								cusInQueue = cusInQueue->next;
 							}
-							cus = cus->next;
+							
 						}
-						p = p->prev;
-						delete temp;
+						p = p->next;
+						deleteInOrder(del);
+
 					}
-					else p = p->prev;
+					else 
+						p = p->next;
 				}
 			}
 			else {
-				customer* p = qCur;
+				customer* p = first;
 				while(p){
 					if(p->energy < 0){
-						p->print();
-						qSize--;
-						customer * temp = p;
-						customer* nextPos = p->next;
-						customer* prevPos = p->prev;
-						if(prevPos) prevPos->next = nextPos;
-						else {
-							qHead = p->next;
-						}
-						if(nextPos) nextPos->prev = prevPos;
+						customer* del = p;
+						if(!temp) temp = new customer(p->name, p->energy,nullptr, nullptr);
 						else{
-							qCur = p->prev;
+							temp->next = new customer(p->name, p->energy, temp, nullptr);
+							temp = temp->next;
 						}
-						p = p->prev;
-						delete temp;
-					}
-					else p = p->prev;
-				}
-				p = last;
-				while (p)
-				{
-					if(p->energy < 0){
-						customer * temp = p;
-						customer* nextPos = p->next;
-						customer* prevPos = p->prev;
-						if(prevPos) prevPos->next = nextPos;
-						else {
-							first = p->next;
-						}
-						if(nextPos) nextPos->prev = prevPos;
-						else{
-							last = p->prev;
-						}
-
-						customer* cus= cur;
-						for(int i=0; i< curSize; i++){
-							if(cus->name == temp->name){
-								cus->print();
-								deleteNode(cus);
-								break;
+						bool inTable = false;
+						customer* cusInTable = cur;
+						for(int i=0; i< curSize && !inTable && cusInTable; i++){
+							if(cusInTable->name == p->name){
+								deleteNode(cusInTable);
+								inTable = true;
 							}
-							cus = cus->next;
+							cusInTable = cusInTable->next;
 						}
-						p = p->prev;
-						delete temp;
-					}
-					else p = p->prev;
-				}
-			}
-			while(curSize < MAXSIZE){
-				if(qSize){
-					customer* cus = qHead;
-					string name = cus->name;
-					int energy = cus->energy;
-					popQueue();
-					RED(name,energy);
-				}
-				else break;
-			}
 
+						if(!inTable){
+							customer* cusInQueue = qHead;
+							while (cusInQueue)
+							{
+								if(cusInQueue->name == p->name){
+									deleteNodeInQueue(cusInQueue);
+									break;
+								}
+								cusInQueue = cusInQueue->next;
+							}
+							
+						}
+						p = p->next;
+						deleteInOrder(del);
+					}
+					else 
+						p = p->next;
+				}
+			}
+			while(curSize < MAXSIZE && qSize){
+				dontAdd = true;
+				customer* cus = qHead;
+				string name = cus->name;
+				int energy = cus->energy;
+				popQueue();
+				RED(name,energy);
+				dontAdd = false;
+			}
+			while(temp){
+				customer *tt = temp;
+				temp->print();
+				temp = temp->prev;
+				delete tt;
+			}
 		}
 		void LIGHT(int num)
 		{
-			// cout<<query++<<" --------------------"<<endl;
+			static int query = 1;
+			cout<<query++<<" --------------------"<<endl;
 			if(num > 0){
 				customer *p = cur;
 				// cout<<curSize<<endl;
