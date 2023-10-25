@@ -22,7 +22,20 @@ class imp_res : public Restaurant
 				p = p->next;
 				delete tmp;
 			}
+			p = cur;
+			for(int i=0; i< curSize ; i++){
+				customer* tmp = p;
+				p = p->next;
+				delete tmp;
+			}
+			p = qHead;
+			while(p){
+				customer* tmp = p;
+				p = p->next;
+				delete tmp;
+			}
 		}
+
 		void deleteInOrder(customer* p ){
 			customer* tmp = p;
 			if(p == first){
